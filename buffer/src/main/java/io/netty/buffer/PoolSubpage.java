@@ -200,27 +200,35 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public String toString() {
-        if (!doNotDestroy) {
-            return "(" + memoryMapIdx + ": not in use)";
-        }
+        synchronized (chunk.arena) {
+            if (!doNotDestroy) {
+                return "(" + memoryMapIdx + ": not in use)";
+            }
 
-        return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
-               ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
+            return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
+                    ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
+        }
     }
 
     @Override
     public int maxNumElements() {
-        return maxNumElems;
+        synchronized (chunk.arena) {
+            return maxNumElems;
+        }
     }
 
     @Override
     public int numAvailable() {
-        return numAvail;
+        synchronized (chunk.arena) {
+            return numAvail;
+        }
     }
 
     @Override
     public int elementSize() {
-        return elemSize;
+        synchronized (chunk.arena) {
+            return elemSize;
+        }
     }
 
     @Override
