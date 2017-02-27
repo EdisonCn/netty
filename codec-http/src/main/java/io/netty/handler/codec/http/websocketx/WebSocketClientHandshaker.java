@@ -33,9 +33,11 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 
@@ -453,13 +455,33 @@ public abstract class WebSocketClientHandshaker {
         return wsPort;
     }
 
+    static CharSequence websocketHostValue(URI wsURL) {
+        int port =  wsURL.getPort();
+        if (port == -1) {
+            return wsURL.getHost();
+        }
+        String host = wsURL.getHost();
+        if (port == HttpScheme.HTTP.port()) {
+            return HttpScheme.HTTP.name().contentEquals(wsURL.getScheme())
+                    || "ws".equals(wsURL.getScheme()) ? host : NetUtil.toSocketAddressString(host, port);
+        }
+        if (port == HttpScheme.HTTPS.port()) {
+            return HttpScheme.HTTPS.name().contentEquals(wsURL.getScheme())
+                    || "wss".equals(wsURL.getScheme()) ? host : NetUtil.toSocketAddressString(host, port);
+        }
+
+        // if the port is not standard (80/443) its needed to add the port to the header.
+        // See http://tools.ietf.org/html/rfc6454#section-6.2
+        return NetUtil.toSocketAddressString(InetSocketAddress.createUnresolved(host, port));
+    }
+
     static CharSequence websocketOriginValue(String host, int wsPort) {
         String originValue = (wsPort == HttpScheme.HTTPS.port() ?
                 HttpScheme.HTTPS.name() : HttpScheme.HTTP.name()) + "://" + host;
         if (wsPort != HttpScheme.HTTP.port() && wsPort != HttpScheme.HTTPS.port()) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            return originValue + ':' + wsPort;
+            return NetUtil.toSocketAddressString(originValue, wsPort);
         }
         return originValue;
     }
